@@ -3,32 +3,45 @@ const { WebSocketServer } = require("ws");
 
 const wss1 = new WebSocketServer({ port: 8080 });
 
-let totalUser = 0;
+/**
+ * all socket is array of obj
+ * [{
+ *    socket : user(WebSocket),
+ *    roomId : "123123"
+ * }]
+ */
+// all socket all users sockets stored
+let allSocket = [];
+
+// every time socket connected this event handler work for each socket connected
 wss1.on("connection", (socket) => {
-  // if error log error
-  wss1.on("error", console.error);
-  console.log("server connected");
-
-  socket.send("server connected");
-  socket.send("user connected, total users:- " + totalUser);
-
-  // client/socket connected
-  totalUser++;
-  console.log("user connected, total users :- " + totalUser);
-
-  // when client/socket send message the server get all client in the server and send the message to them
+  // when socket send something
   socket.on("message", (msg) => {
-    console.log(msg.toString());
-    wss1.clients.forEach((client) => {
-      if (client !== socket) {
-        client.send(msg.toString());
-      }
-    });
-  });
+    // msg is string here because websocket only deals with the string
+    // parse message to json to read key val info
+    const parsedInfo = JSON.parse(msg);
 
-  socket.on("close", () => {
-    totalUser--;
-    console.log("user Disconnected, total users :- " + totalUser);
-    socket.send("user connected, total users:- " + totalUser);
+    // if type is join -> join that socket user to room with given id
+    if (parsedInfo.type == "join") {
+      allSocket.push({
+        socket,
+        roomId: parsedInfo.payload.roomId,
+      });
+    }
+    console.log("all sockets : ", allSocket);
+    console.log("sockets array length", allSocket.length);
+
+    // if type is chat -> send or boradcast message to that room by search the user room firslty
+    if (parsedInfo.type == "chat") {
+      // current user room == total sockets main se vo user jiska socket abhi wale socket is match hori hai uska roomid is curr user is room id
+      const currUserRoom = allSocket.find(
+        (user) => user.socket == socket
+      ).roomId;
+
+      allSocket.forEach((user) => {
+        if (user.roomId == currUserRoom)
+          user.socket.send(parsedInfo.payload.msg);
+      });
+    }
   });
 });

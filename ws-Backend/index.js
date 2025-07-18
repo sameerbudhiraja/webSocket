@@ -20,6 +20,7 @@ wss1.on("connection", (socket) => {
     // msg is string here because websocket only deals with the string
     // parse message to json to read key val info
     const parsedInfo = JSON.parse(msg);
+    console.log(parsedInfo + "parsed info");
 
     // if type is join -> join that socket user to room with given id
     if (parsedInfo.type == "join") {
@@ -37,10 +38,16 @@ wss1.on("connection", (socket) => {
       const currUserRoom = allSocket.find(
         (user) => user.socket == socket
       ).roomId;
+      const chatMsg = JSON.stringify({
+        type: "chat",
+        payload: {
+          message: parsedInfo.payload.message,
+        },
+      });
 
       allSocket.forEach((user) => {
         if (user.roomId == currUserRoom)
-          user.socket.send(parsedInfo.payload.msg);
+          user.socket.send(chatMsg);
       });
     }
   });
